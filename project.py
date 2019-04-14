@@ -2,6 +2,7 @@ import random
 import time
 from operator import add
 import matplotlib.pyplot as plt
+import statistics
 
 start = time.time()
 
@@ -101,6 +102,16 @@ def find_dist_distribution(cluster, clus_centre, counter):
     plt.savefig(str(counter) + ".png")
 
 
+
+def find_dist_stats(cluster, clus_centre):
+    distances = [distance(y, clus_centre) for y in cluster]
+    mean = statistics.mean(distances)
+    stddev = statistics.stdev(distances, xbar=mean)
+    return mean, stddev
+
+
+
+
 def calculate_summary_statistics(data):
     stats = [0 for _ in range(600)]
     for item in data:
@@ -133,9 +144,10 @@ def initialize():
 
     #print(tq_dists)
 
-    # x = random.sample(range(100), 5)
-    # for _x in x:
-    #     find_dist_distribution(clusters[_x], clus_centres[_x], x.index(_x))
+    x = random.sample(range(100), 5)
+    for _x in x:
+        #find_dist_distribution(clusters[_x], clus_centres[_x], x.index(_x))
+        print(_x, find_dist_stats(clusters[_x], clus_centres[_x]))
     
 
 
