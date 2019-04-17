@@ -3,6 +3,8 @@ import time
 from operator import add
 import matplotlib.pyplot as plt
 import statistics
+import numpy as np
+from copy import deepcopy
 
 start = time.time()
 
@@ -95,7 +97,7 @@ def find_intra_cluster_max_distance(cluster):
     return max_dist
 
 
-def find_dist_distribution(cluster, clus_centre, counter):
+def plot_dist_distribution(cluster, clus_centre, counter):
     distances = [distance(y, clus_centre) for y in cluster]
     plt.figure(counter)
     plt.hist(distances, bins=30)
@@ -124,31 +126,81 @@ def calculate_summary_statistics(data):
     stats = [x/datasize for x in stats]
     return stats
 
+def synthesize(cluster_centres, mean, variance, cluster_ratios, synth_data_size):
+    synth_data = []
+    for c in range(len(cluster_centres)):
+        centre = bin(cluster_centres[c])[2:].zfill(600)
+        for i in range(int(cluster_ratios[c]*synth_data_size)):
+            data_point = list(deepcopy(centre))
+            flips = int(np.random.normal(loc = mean, scale = variance))
+            for j in range(flips):
+                index = random.randint(0,599)
+                if data_point[index] == '1':
+                    data_point[index] = '0'
+                else:
+                    data_point[index] = '1'
+            record = ",".join(data_point)
+            synth_data.append(record)
 
+    return synth_data
 
 
 def initialize():
-    f = open("dataset").read().strip().split()[:10000]
+    f = open("dataset").read().strip().split()[:20000]
 
     #Converting to integer for better binary handling
     for i in range(len(f)):
         f[i] = int(f[i].replace(",",""), base=2)
 
-    print(calculate_summary_statistics(f)[1:20])
+    sum_stats_orig = calculate_summary_statistics(f)
 
     clusters, clus_centres = k_means(f, 100)
-    #clus_lengths = [len(x) for x in clusters]
-    #print(clus_lengths)
-    #print(sum(clus_lengths))
+    clus_lengths = [len(x) for x in clusters]
+    total_records = sum(clus_lengths)
+    cluster_ratios = [x/total_records for x in clus_lengths]
+
     max_dists, tq_dists = max_distance(clusters, clus_centres)
 
     #print(tq_dists)
 
-    x = random.sample(range(100), 5)
+    no_samples = 10
+    overall_mean = 0
+    overall_stddev = 0
+    x = random.sample(range(100), no_samples)
     for _x in x:
-        #find_dist_distribution(clusters[_x], clus_centres[_x], x.index(_x))
-        print(_x, find_dist_stats(clusters[_x], clus_centres[_x]))
+        mean, stddev = find_dist_stats(clusters[_x], clus_centres[_x])
+        overall_mean += mean
+        overall_stddev += stddev**2
     
+    overall_mean = overall_mean/no_samples
+    overall_stddev = (overall_stddev**0.5)/no_samples
+
+    synthetic_data = synthesize(clus_centres, overall_mean, overall_stddev, cluster_ratios, 2000)
+
+    output_data = open("synth_data", "w+")
+    for rec in synthetic_data:
+        output_data.write(rec + "\n")
+    
+    output_data.close()
+    
+    for i in range(len(synthetic_data)):
+        synthetic_data[i] = int(synthetic_data[i].replace(",",""), base=2)
+    
+    sum_stats_synth = calculate_summary_statistics(synthetic_data)
+
+    diff = [abs(sum_stats_synth[i] - sum_stats_orig[i]) for i in range(600)]
+
+    mean_diff = mean(diff)
+    max_diff = max(diff)
+    min_diff = min(diff)
+
+    output_stats = open("output_stats.csv", "w+")
+    output_stats.write(",".join([str(round(x, 3)) for x in diff]))
+    output_stats.write("\n\nMax Diff," + str(round(max_diff)))
+    output_stats.write("\nMin Diff," + str(round(min_diff)))
+    output_stats.write("\nAverage Diff," + str(round(mean_diff)))
+    output_stats.close()
+
 
 
 if __name__ == "__main__":
