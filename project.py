@@ -53,7 +53,7 @@ def k_means(data, cluster_count):
     clusters = run_kmeans(data, initial_centres)
     print("Epoch completed:", 0, "Time:" ,round(time.time() - start, 2))
 
-    epochs = 10
+    epochs = 15
     for e_ in range(epochs):
         new_centres = getnewcentres(clusters)
         if set(new_centres) == set(initial_centres):
@@ -112,6 +112,21 @@ def find_dist_stats(cluster, clus_centre):
     return mean, stddev
 
 
+def add_noise_cluster_centres(cluster_centres):
+    noisy_centres = []
+    for c in range(len(cluster_centres)):
+        data_point = list(bin(cluster_centres[c])[2:].zfill(600))
+        flips = int(abs(np.random.normal(loc = 0, scale = 25)))     #Change noise parameters here
+        for j in range(flips):
+            index = random.randint(0,599)
+            if data_point[index] == '1':
+                data_point[index] = '0'
+            else:
+                data_point[index] = '1'
+        record = int("".join(data_point), base=2)
+        noisy_centres.append(record)
+
+    return noisy_centres
 
 
 def calculate_summary_statistics(data):
@@ -146,7 +161,7 @@ def synthesize(cluster_centres, mean, variance, cluster_ratios, synth_data_size)
 
 
 def initialize():
-    f = open("dataset").read().strip().split()[:20000]
+    f = open("dataset").read().strip().split()[:]
 
     #Converting to integer for better binary handling
     for i in range(len(f)):
@@ -159,9 +174,16 @@ def initialize():
     total_records = sum(clus_lengths)
     cluster_ratios = [x/total_records for x in clus_lengths]
 
-    max_dists, tq_dists = max_distance(clusters, clus_centres)
+    #max_dists, tq_dists = max_distance(clusters, clus_centres)
 
-    #print(tq_dists)
+    # Inter-clluster centre distances
+    # inter_cluster_dist_stats = []
+    # for c in clus_centres:
+    #     inter_cluster_dist_stats.append(find_dist_stats(clus_centres, c))
+    
+    # ic_output_stats = open("ic_output_stats.csv", "w+")
+    # ic_output_stats.write("\n".join([str(x)[1:-1] for x in inter_cluster_dist_stats]))
+    # ic_output_stats.close()
 
     no_samples = 10
     overall_mean = 0
@@ -170,12 +192,14 @@ def initialize():
     for _x in x:
         mean, stddev = find_dist_stats(clusters[_x], clus_centres[_x])
         overall_mean += mean
-        overall_stddev += stddev**2
+        overall_stddev += stddev
     
     overall_mean = overall_mean/no_samples
-    overall_stddev = (overall_stddev**0.5)/no_samples
+    overall_stddev = (overall_stddev)/no_samples
 
-    synthetic_data = synthesize(clus_centres, overall_mean, overall_stddev, cluster_ratios, 2000)
+    noisy_centres = add_noise_cluster_centres(clus_centres)
+
+    synthetic_data = synthesize(noisy_centres, overall_mean, overall_stddev, cluster_ratios, 10000)
 
     output_data = open("synth_data", "w+")
     for rec in synthetic_data:
@@ -190,15 +214,15 @@ def initialize():
 
     diff = [abs(sum_stats_synth[i] - sum_stats_orig[i]) for i in range(600)]
 
-    mean_diff = mean(diff)
+    mean_diff = np.mean(diff)
     max_diff = max(diff)
     min_diff = min(diff)
 
     output_stats = open("output_stats.csv", "w+")
     output_stats.write(",".join([str(round(x, 3)) for x in diff]))
-    output_stats.write("\n\nMax Diff," + str(round(max_diff)))
-    output_stats.write("\nMin Diff," + str(round(min_diff)))
-    output_stats.write("\nAverage Diff," + str(round(mean_diff)))
+    output_stats.write("\n\nMax Diff," + str(round(max_diff, 3)))
+    output_stats.write("\nMin Diff," + str(round(min_diff, 3)))
+    output_stats.write("\nAverage Diff," + str(round(mean_diff, 3)))
     output_stats.close()
 
 
