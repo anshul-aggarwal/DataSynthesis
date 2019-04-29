@@ -174,6 +174,11 @@ def initialize():
     total_records = sum(clus_lengths)
     cluster_ratios = [x/total_records for x in clus_lengths]
 
+    clusfile = open("clusfile", 'w+')
+    for c in clus_centres:
+        clusfile.write(str(c) + "\n")
+    clusfile.close()
+
     #max_dists, tq_dists = max_distance(clusters, clus_centres)
 
     # Inter-clluster centre distances
@@ -223,6 +228,9 @@ def initialize():
     output_stats.write("\n\nMax Diff," + str(round(max_diff, 3)))
     output_stats.write("\nMin Diff," + str(round(min_diff, 3)))
     output_stats.write("\nAverage Diff," + str(round(mean_diff, 3)))
+
+    output_stats.write("\n\nOverall Mean," + str(round(overall_mean, 3)))
+    output_stats.write("\nOverall Stddev," + str(round(overall_stddev, 3)))
     output_stats.close()
 
 
